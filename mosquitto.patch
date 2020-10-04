@@ -1,0 +1,138 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 27c08c58..f78ce2a0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,7 +21,7 @@ if (WIN32)
+ endif (WIN32)
+ 
+ include(GNUInstallDirs)
+-
++option(WITH_BINARIES "Build with binaries" OFF)
+ option(WITH_BUNDLED_DEPS "Build with bundled dependencies?" ON)
+ option(WITH_TLS
+ 	"Include SSL/TLS support?" ON)
+@@ -94,8 +94,10 @@ endif (WITH_DLT)
+ # ========================================
+ 
+ add_subdirectory(lib)
+-add_subdirectory(client)
+-add_subdirectory(src)
++if (WITH_BINARIES)
++	add_subdirectory(client)
++	add_subdirectory(src)
++endif (WITH_BINARIES)
+ if (DOCUMENTATION)
+ 	add_subdirectory(man)
+ endif (DOCUMENTATION)
+diff --git a/client/CMakeLists.txt b/client/CMakeLists.txt
+index 6aa24b2b..6a75574f 100644
+--- a/client/CMakeLists.txt
++++ b/client/CMakeLists.txt
+@@ -14,9 +14,9 @@ add_executable(mosquitto_sub sub_client.c sub_client_output.c ${shared_src})
+ add_executable(mosquitto_rr rr_client.c pub_shared.c sub_client_output.c ${shared_src})
+ 
+ if (WITH_STATIC_LIBRARIES)
+-	target_link_libraries(mosquitto_pub libmosquitto_static)
+-	target_link_libraries(mosquitto_sub libmosquitto_static)
+-	target_link_libraries(mosquitto_rr libmosquitto_static)
++	target_link_libraries(mosquitto_pub libmosquitto)
++	target_link_libraries(mosquitto_sub libmosquitto)
++	target_link_libraries(mosquitto_rr libmosquitto)
+ else()
+ 	target_link_libraries(mosquitto_pub libmosquitto)
+ 	target_link_libraries(mosquitto_sub libmosquitto)
+diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+index f81dce7c..fafbb5eb 100644
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -77,7 +77,7 @@ if (WITH_SRV)
+ 		message(WARNING "c-ares library not found.")
+ 	endif (ARES_HEADER)
+ endif (WITH_SRV)
+-
++if (NOT WITH_STATIC_LIBRARIES)
+ add_library(libmosquitto SHARED ${C_SRC})
+ set_target_properties(libmosquitto PROPERTIES
+ 	POSITION_INDEPENDENT_CODE 1
+@@ -93,23 +93,23 @@ set_target_properties(libmosquitto PROPERTIES
+ 
+ install(TARGETS libmosquitto RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+ 
+-if (WITH_STATIC_LIBRARIES)
+-	add_library(libmosquitto_static STATIC ${C_SRC})
++else (WITH_STATIC_LIBRARIES)
++	add_library(libmosquitto STATIC ${C_SRC})
+ 	if (WITH_PIC)
+-		set_target_properties(libmosquitto_static PROPERTIES
++		set_target_properties(libmosquitto PROPERTIES
+ 			POSITION_INDEPENDENT_CODE 1
+ 		)
+ 	endif (WITH_PIC)
+ 
+-	target_link_libraries(libmosquitto_static ${LIBRARIES})
++	target_link_libraries(libmosquitto ${LIBRARIES})
+ 
+-	set_target_properties(libmosquitto_static PROPERTIES
+-		OUTPUT_NAME mosquitto_static
++	set_target_properties(libmosquitto PROPERTIES
++		OUTPUT_NAME mosquitto
+ 		VERSION ${VERSION}
+ 	)
+ 
+-	target_compile_definitions(libmosquitto_static PUBLIC "LIBMOSQUITTO_STATIC")
+-	install(TARGETS libmosquitto_static ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
++	target_compile_definitions(libmosquitto PUBLIC "LIBMOSQUITTO_STATIC")
++	install(TARGETS libmosquitto ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+ endif (WITH_STATIC_LIBRARIES)
+ 
+ install(FILES mosquitto.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+diff --git a/lib/cpp/CMakeLists.txt b/lib/cpp/CMakeLists.txt
+index b39ac3f5..1cd96d1d 100644
+--- a/lib/cpp/CMakeLists.txt
++++ b/lib/cpp/CMakeLists.txt
+@@ -3,7 +3,8 @@ include_directories(${mosquitto_SOURCE_DIR}/lib ${mosquitto_SOURCE_DIR}/lib/cpp
+ link_directories(${mosquitto_BINARY_DIR}/lib)
+ 
+ set(CPP_SRC mosquittopp.cpp mosquittopp.h)
+-
++set(LIB_NAME mosquittopp)
++if (NOT WITH_STATIC_LIBRARIES)
+ add_library(mosquittopp SHARED ${CPP_SRC})
+ set_target_properties(mosquittopp PROPERTIES
+ 	POSITION_INDEPENDENT_CODE 1
+@@ -14,27 +15,26 @@ set_target_properties(mosquittopp PROPERTIES
+ 	SOVERSION 1
+ )
+ install(TARGETS mosquittopp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+-
+-if (WITH_STATIC_LIBRARIES)
+-	add_library(mosquittopp_static STATIC
++else (WITH_STATIC_LIBRARIES)
++	add_library(mosquittopp STATIC
+ 		${C_SRC}
+ 		${CPP_SRC}
+ 	)
+ 	if (WITH_PIC)
+-		set_target_properties(mosquittopp_static PROPERTIES
++		set_target_properties(mosquittopp PROPERTIES
+ 			POSITION_INDEPENDENT_CODE 1
+ 		)
+ 	endif (WITH_PIC)
+ 
+-	target_link_libraries(mosquittopp_static ${LIBRARIES})
++	target_link_libraries(mosquittopp ${LIBRARIES})
+ 
+-	set_target_properties(mosquittopp_static PROPERTIES
+-		OUTPUT_NAME mosquittopp_static
++	set_target_properties(mosquittopp PROPERTIES
++		OUTPUT_NAME mosquittopp
+ 		VERSION ${VERSION}
+ 	)
+ 
+-	target_compile_definitions(mosquittopp_static PUBLIC "LIBMOSQUITTO_STATIC")
+-	install(TARGETS mosquittopp_static ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
++	target_compile_definitions(mosquittopp PUBLIC "LIBMOSQUITTO_STATIC")
++	install(TARGETS mosquittopp ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+ endif (WITH_STATIC_LIBRARIES)
+ 
+ install(FILES mosquittopp.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

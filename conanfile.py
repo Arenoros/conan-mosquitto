@@ -54,8 +54,6 @@ class MosquittoConan(ConanFile):
     def configure(self):
         if not self.options.with_mosquittopp:
             del self.settings.compiler.libcxx
-        if not self.options.shared:
-            self.options.fPIC = False
 
     def requirements(self):
         if self.options.with_tls:
